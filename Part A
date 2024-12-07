@@ -1,0 +1,101 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
+
+using namespace std;
+
+// Define the Job struct
+struct Job {
+    char type;             // Job Type: A, B, C, D
+    int arrivalTime;       // Cumulative Arrival Time
+    int processingTime;    // Processing Time
+    int jobNumber;         // Overall job number
+    int typeNumber;        // Sequential job number within the type
+};
+
+// Function to generate random numbers within the range X ± Y
+int randomRange(int base, int range) {
+    return (base - range) + rand() % (2 * range + 1);
+}
+
+// Generate jobs for a specific type
+vector<Job> generateJobs(char type, int count, int baseArrival, int arrivalRange, int baseProcessing, int procRange) {
+    vector<Job> jobs;
+    int cumulativeArrival = 0;
+
+    for (int i = 0; i < count; ++i) {
+        int arrivalTime = randomRange(baseArrival, arrivalRange);
+        int processingTime = randomRange(baseProcessing, procRange);
+        cumulativeArrival += arrivalTime;
+
+        jobs.push_back({ type, cumulativeArrival, processingTime, i + 1, i + 1 });
+    }
+
+    return jobs;
+}
+
+// Combine and sort all job types
+vector<Job> combineAndSortJobs(const vector<Job>& jobsA, const vector<Job>& jobsB,
+    const vector<Job>& jobsC, const vector<Job>& jobsD) {
+    vector<Job> allJobs = jobsA;
+    allJobs.insert(allJobs.end(), jobsB.begin(), jobsB.end());
+    allJobs.insert(allJobs.end(), jobsC.begin(), jobsC.end());
+    allJobs.insert(allJobs.end(), jobsD.begin(), jobsD.end());
+
+    sort(allJobs.begin(), allJobs.end(), [](const Job& j1, const Job& j2) {
+        if (j1.arrivalTime == j2.arrivalTime)
+            return j1.type == 'D'; // Type D gets priority for identical arrival times
+        return j1.arrivalTime < j2.arrivalTime; // Sort by arrival time
+        });
+
+    return allJobs;
+}
+
+// Write jobs to a CSV file
+void writeJobsToFile(const vector<Job>& jobs, const string& filename) {
+    ofstream file(filename);
+
+    if (!file.is_open()) {
+        cerr << "Error: Unable to open file " << filename << endl;
+        return;
+    }
+
+    file << "Job Type,Arrival Time,Processing Time" << endl;
+    for (const auto& job : jobs) {
+        file << job.type << "," << job.arrivalTime << "," << job.processingTime << endl;
+    }
+
+    file.close();
+    cout << "Job data successfully written to " << filename << endl;
+}
+
+// Main function
+int main() {
+    srand(static_cast<unsigned>(time(0))); // Seed for random number generation
+
+    // Generate jobs for each type
+    vector<Job> jobsA = generateJobs('A', 2400, 5, 1, 3, 2);
+    vector<Job> jobsB = generateJobs('B', 1650, 7, 1, 5, 3);
+    vector<Job> jobsC = generateJobs('C', 1100, 11, 7, 9, 3);
+    vector<Job> jobsD = generateJobs('D', 1200, 9, 5, 12, 10);
+
+    // Combine and sort all jobs
+    vector<Job> allJobs = combineAndSortJobs(jobsA, jobsB, jobsC, jobsD);
+
+    // Write to a file
+    string filename = "job_data.csv";
+    writeJobsToFile(allJobs, filename);
+
+    // Provide a snippet of the first 100 jobs for verification
+    cout << "\nFirst 100 Jobs (Snippet):" << endl;
+    for (size_t i = 0; i < 100 && i < allJobs.size(); ++i) {
+        cout << "Job Type: " << allJobs[i].type
+            << ", Arrival Time: " << allJobs[i].arrivalTime
+            << ", Processing Time: " << allJobs[i].processingTime << endl;
+    }
+
+    return 0;
+}
